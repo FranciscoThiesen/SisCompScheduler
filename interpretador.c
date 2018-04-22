@@ -23,6 +23,12 @@ int main() {
     int scheduler_mem = shmget(1, sizeof(pid_t), IPC_CREAT | S_IRUSR | S_IRWXU);
     pid_t *scheduler_pid = (int*) shmat(scheduler_mem, 0, 0);
 
+    int programNameMem = shmget(2, maxInputSize*sizeof(char), IPC_CREAT | S_IRUSR | S_IRWXU);
+    char *programName = (char*) shmat(programNameMem, 0, 0);
+        
+    int paramMem = shmget(4, 3*sizeof(int), IPC_CREAT | S_IRUSR | S_IRWXU);
+    int *params = (int*) shmat(paramMem, 0, 0);
+
     pInput = fopen("exec.txt", "r");
 
     if(pInput == NULL) {
@@ -47,29 +53,33 @@ int main() {
         // o tamanho da sentenca
         // wordIndex == 2 -> roundRobin, wordIndex == 3 -> Prioridades, == 4 -> real-time
         
-        int programNameMem = shmget(2, maxInputSize*sizeof(char), IPC_CREAT | S_IRUSR | S_IRWXU);
-        char *programName = (char*) shmat(programNameMem, 0, 0);
         programName = sentence[1];
 
-        if (wordIndex == 3) { // prioridade
-            int priorityMem = shmget(4, sizeof(int), IPC_CREAT | S_IRUSR | S_IRWXU);
-            int *priority;
-            priority = (int*) shmat(priorityMem, 0, 0);
-
-            char* priorityParam = sentence[2];
-            *priority = priorityParam[3] - '0';
+        if (wordIndex == 2) {
+            params = { 2 }
+        }
+        else if (wordIndex == 3) { // prioridade
+            int* priority = sentence[2] - '0';
+            params = { 3, priority }
         }
         else if (wordIndex == 4) { // real-time
-            int realtimeMem = shmget(5, 2*sizeof(int), IPC_CREAT | S_IRUSR | S_IRWXU);
-            int *data = (int*) shmat(realtimeMem, 0, 0);
-
             char* start = *(sentence[2] + 2);
             char* duration = *(sentence[3] + 2);
-            *data = {atoi(start), atoi(duration)};
+            params = { 4, atoi(start), atoi(duration)};
         }
 
         kill(*scheduler_pid, SIGSTOP); // send scheduler a signal indicating a line was read
     }
+
+    shmdt(interpret_pid);
+    shmdt(scheduler_pid);
+    shmdt(programName);
+    shmdt(params);
+
+    shmctl(interpret_mem, IPC_RMID, 0);
+    shmctl(scheduler_mem, IPC_RMID, 0);
+    shmctl(programNameMem, IPC_RMID, 0);
+    shmctl(paramMem, IPC_RMID, 0);
 
     fclose(pInput);
 
