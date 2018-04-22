@@ -1,3 +1,4 @@
+#include "interpretador.h"
 #include <stdio.h>
 #include <signal.h>
 #include <unistd.h>
