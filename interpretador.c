@@ -1,4 +1,3 @@
-#include "interpretador.h"
 #include <stdio.h>
 #include <signal.h>
 #include <unistd.h>
@@ -6,6 +5,9 @@
 #include <sys/wait.h>
 #include <string.h>
 #include <stdlib.h>
+#include <sys/ipc.h>
+#include <sys/stat.h>
+#include <sys/shm.h>
 
 const int bufferLength = 256;
 const int maxInputSize = 30;
@@ -52,23 +54,35 @@ int main() {
         // Podemos separar o tipo de politica de escalonamento de acordo com 
         // o tamanho da sentenca
         // wordIndex == 2 -> roundRobin, wordIndex == 3 -> Prioridades, == 4 -> real-time
+         
+        programName = sentence[0];
+        printf("%s\n", programName);
+        if (wordIndex == 1) {
+            //params = { 2 }
+            params[0] = 2;
+            // printf("%d\n", params[0]);
+        }
+        else if (wordIndex == 2) { // prioridade
+            printf("prioridade = %c \n", sentence[1][3]);
+            int priority = sentence[1][3] - '0';
+            //params = { 3, priority }
+            params[0] = 3;
+            params[1] = priority;
+            // printf("%d %d\n", params[0], params[1]);
+        }
+        else if (wordIndex == 3) { // real-time
+            ////// IMPORTANTE, USUARIO TERA QUE ESCREVER NA FORMA PROGRAMA1 I=10 D=05 ... sempre 2 digitos para nums
+            int begin = (sentence[1][2] - '0') * 10 + (sentence[1][3] - '0');
+            int length = (sentence[2][2] - '0') * 10 + (sentence[2][3] - '0');            
+            //params = { 4, atoi(start), atoi(duration)};
+            params[0] = 4;
+            params[1] = begin;
+            params[2] = length;
+            
+            // printf("%d %d %d\n", params[0], params[1], params[2]);
+        }
         
-        programName = sentence[1];
-
-        if (wordIndex == 2) {
-            params = { 2 }
-        }
-        else if (wordIndex == 3) { // prioridade
-            int* priority = sentence[2] - '0';
-            params = { 3, priority }
-        }
-        else if (wordIndex == 4) { // real-time
-            char* start = *(sentence[2] + 2);
-            char* duration = *(sentence[3] + 2);
-            params = { 4, atoi(start), atoi(duration)};
-        }
-
-        kill(*scheduler_pid, SIGSTOP); // send scheduler a signal indicating a line was read
+        //kill(*scheduler_pid, SIGSTOP); // send scheduler a signal indicating a line was read
     }
 
     shmdt(interpret_pid);

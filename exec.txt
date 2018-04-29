@@ -1,0 +1,3 @@
+programa1 PR=6
+programa2
+programa3 I=10 D=05
