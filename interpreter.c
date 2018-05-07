@@ -11,7 +11,7 @@
 #define handle_error(msg)                               \
     do { perror(msg); exit(EXIT_FAILURE); } while (0)
 
-const int maxNameSize = 100;
+const int maxNameSize = 30;
 
 static void chomp(char* s)
 {
@@ -74,11 +74,11 @@ int main()
         
         //programName = sentence[1];
         strcpy( programName, sentence[1] );
-        printf("Vou passar para o scheduler o programa %s", programName);
+        printf("Vou passar para o scheduler o programa %s\n", programName);
         
         if (wordIndex == 2)
         {
-            printf("quero agendar um round-robin = %s", programName);
+            printf("quero agendar um round-robin = %s\n", programName);
             params[0] = 1;
             // printf("round robin\n");
         }
@@ -103,7 +103,7 @@ int main()
         // send scheduler a signal indicating a line was read
         if (kill(*scheduler_pid, SIGUSR1) < 0) {
             printf("Error sending signal\n");
-            handle_error("signalfd");
+            handle_error("signalfd\n");
         }
         printf("\n");
     }
