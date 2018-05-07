@@ -1,3 +1,4 @@
-programa1 PR=6
-programa2
-programa3 I=10 D=05
+Exec p1 
+Exec p3 PR=2
+Exec p2 I=02 D=03
+Exec p4 PR=1
