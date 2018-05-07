@@ -63,8 +63,9 @@ int main()
         // o tamanho da sentenca
         // wordIndex == 2 -> roundRobin, wordIndex == 3 -> Prioridades, == 4 -> real-time
         
-        programName = sentence[1];
-        printf("%s\n", programName);
+        //programName = sentence[1];
+        strcpy( programName, sentence[1] );
+        printf("Vou passar para o scheduler o programa %s\n", programName);
         
         if (wordIndex == 2)
         {

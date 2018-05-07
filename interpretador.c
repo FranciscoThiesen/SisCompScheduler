@@ -26,7 +26,7 @@ int main() {
     pid_t *scheduler_pid = (int*) shmat(scheduler_mem, 0, 0);
 
     int programNameMem = shmget(2, maxInputSize*sizeof(char), IPC_CREAT | S_IRUSR | S_IRWXU);
-    char *programName = (char*) shmat(programNameMem, 0, 0);
+    char* programName = (char*) shmat(programNameMem, 0, 0);
         
     int paramMem = shmget(4, 3*sizeof(int), IPC_CREAT | S_IRUSR | S_IRWXU);
     int *params = (int*) shmat(paramMem, 0, 0);
@@ -56,6 +56,7 @@ int main() {
         // wordIndex == 2 -> roundRobin, wordIndex == 3 -> Prioridades, == 4 -> real-time
          
         programName = sentence[0];
+        printf("%s\n", sentence[0]);
         printf("%s\n", programName);
         if (wordIndex == 1) {
             //params = { 2 }

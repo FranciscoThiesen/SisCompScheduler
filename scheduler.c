@@ -13,7 +13,7 @@
 const int maxInputSize = 30;
 const int maxProcess = 100;
 const int numPriorities = 8;
-const float quantum = 0.5;
+const float quantum = 2;
 
 typedef struct {
     char* name;
@@ -67,7 +67,7 @@ Process* deque(Queue* pQueue) {
 Queue* roundRobinProc;
 
 // We should have a one queue for every priority [0, 7]
-Queue* priorityProc[numPriorities]; // taking into account that the priority belongs to the range [0, 7]
+Queue* priorityProc[8]; // taking into account that the priority belongs to the range [0, 7]
 
 // Array of size 60 (one for each second) of time slots occupied by
 // realTime processes
@@ -154,7 +154,8 @@ void newProcessHandler(int signal) {
     printf("program: %s\n", programName);
     printf("params[0]: %d\n", params[0]);
 
-    p.name = "p1";
+    strcpy(p.name, programName);
+    //p.name = "p1";
     p.type = params[0];
     
     // Initializes process and stops execution in order to obtain pid
@@ -178,7 +179,7 @@ void newProcessHandler(int signal) {
         p.duration = params[2];
         newRealTime(p);
     }
-    else return; // invalid value params[0]
+    else return;// invalid value params[0]
     
     printf("%s -> program read\n", programName);
     
@@ -195,7 +196,12 @@ void scheduler() {
     printf("scheduler pid = %d\n", *scheduler_pid);
     
     // register new process handler as callback function
-    if (signal(SIGUSR1, newProcessHandler) < 0) {
+    //
+    sig_t t = signal(SIGUSR1, newProcessHandler);
+    printf("num te falei %d\n", signal(SIGUSR1, newProcessHandler) );
+    
+    if (t < 0) 
+    {
         printf("error registering signal\n");
     }
     printf("registered signal handler\n");
