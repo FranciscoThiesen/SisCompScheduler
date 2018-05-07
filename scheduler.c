@@ -139,7 +139,8 @@ Process* nextProcess() {
     return NULL;
 }
 
-void newProcessHandler(int signal) {
+void newProcessHandler(int signal) 
+{
     int paramMem = shmget(204, 3 * sizeof(int), IPC_CREAT | S_IRUSR | S_IRWXU );
     int* params = (int*) shmat(paramMem, 0, 0);
     
@@ -197,10 +198,10 @@ void scheduler() {
     
     // register new process handler as callback function
     //
-    sig_t t = signal(SIGUSR1, newProcessHandler);
-    printf("num te falei %d\n", signal(SIGUSR1, newProcessHandler) );
+    //sig_t t = signal(SIGUSR1, newProcessHandler);
+    //printf("num te falei %d\n", signal(SIGUSR1, newProcessHandler) );
     
-    if (t < 0) 
+    if (signal(SIGUSR1, newProcessHandler) < 0) 
     {
         printf("error registering signal\n");
     }

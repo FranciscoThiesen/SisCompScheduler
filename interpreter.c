@@ -13,6 +13,13 @@
 
 const int maxNameSize = 100;
 
+static void chomp(char* s)
+{
+    while(*s && *s != '\n' && *s != '\r') s++;
+
+    *s = 0;
+}
+
 int main()
 {
     FILE* pInput;
@@ -52,7 +59,9 @@ int main()
         char* word = strtok(line, " ");
         while(word != NULL)
         {
+            chomp(word);
             sentence[wordIndex++] = word;
+            printf(" word = %s");
             word = strtok(NULL, " ");
         }
         
@@ -65,10 +74,11 @@ int main()
         
         //programName = sentence[1];
         strcpy( programName, sentence[1] );
-        printf("Vou passar para o scheduler o programa %s\n", programName);
+        printf("Vou passar para o scheduler o programa %s", programName);
         
         if (wordIndex == 2)
         {
+            printf("quero agendar um round-robin = %s", programName);
             params[0] = 1;
             // printf("round robin\n");
         }
@@ -89,9 +99,9 @@ int main()
             params[2] = length;
             // printf("start: %d, duration: %d\n", params[1], params[2]);
         }
-        printf("Wake up scheduler: %d\n", *scheduler_pid);
+        printf("Wake up scheduler! : %d\n", *scheduler_pid);
         // send scheduler a signal indicating a line was read
-        if (kill(*scheduler_pid, SIGUSR1) < 1) {
+        if (kill(*scheduler_pid, SIGUSR1) < 0) {
             printf("Error sending signal\n");
             handle_error("signalfd");
         }
