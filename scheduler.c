@@ -251,8 +251,8 @@ void scheduler() {
         currentSecond = ((curTime - stTime) / CLOCKS_PER_SEC) % 60;
         if (executingRealTimeProcess) {
             result = waitpid(curProcess->procPid, &status, WNOHANG);
-            printf("real time process - result: %d\n\n", result);
-            if (result != 0) { // process finished execution
+            // printf("real time process - result: %d\n\n", result);
+            if (result == 0) { // process finished execution
                 printf("Process %s finished\n", curProcess->name);
                 curProcess->finished = 1;
                 realTimeProc[curProcess->start] = NULL;
@@ -322,11 +322,12 @@ void scheduler() {
                         rrStartTime = curTime;
                     }
                 }
+            }
 
-                
+            if (curProcess != NULL) {
                 result = waitpid(curProcess->procPid, &status, WNOHANG);
-                printf("name: %s, result: %d\n", curProcess->name, result);
-                if (result != 0) {
+                // printf("name: %s, result: %d\n", curProcess->name, result);
+                if (result != 0 && !curProcess->finished) {
                     if (executingRoundRobinProcess) {
                         executingRoundRobinProcess = 0;
                     }
@@ -338,6 +339,7 @@ void scheduler() {
                 }
             }
         }
+        
         if (curProcess != NULL && changedProcess) {
             printf("Executing process %s\n", curProcess->name);
             changedProcess = 0;
