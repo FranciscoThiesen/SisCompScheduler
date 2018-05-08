@@ -78,12 +78,9 @@ int occupiedByRealTime[60];
 Process* realTimeProc[60];
 
 void initRealTimeProcesses() {
-    Process realTimeProc[60]; // realTime[i] -> Stores the realTime process that starts on second i ( if there is one)
-    Process empty;
-    empty.type = -1;
     // inicializando o vetor de realTime com processos "nulos"
     for(int i = 0; i < 60; ++i) {
-        realTimeProc[i] = empty;
+        realTimeProc[i] = NULL;
     }
 }
 
@@ -130,15 +127,20 @@ void newRealTime(Process p) {
 // Get next process to execute
 Process* nextProcess() {
     for(int i = 0; i < numPriorities; ++i) {
-        if( !isEmpty(priorityProc[i]) )
+        if( !isEmpty(priorityProc[i]) ) {
+            printf("dequed priority\n");
             return deque(priorityProc[i]);
+        }
     }
-    if( !isEmpty(roundRobinProc) )
+    if( !isEmpty(roundRobinProc) )  {
+        printf("dequed round robin\n");
         return deque(roundRobinProc);
+    }
     
     return NULL;
 }
-
+int totalProcesses = 0;
+int finishedProcesses = 0;
 void newProcessHandler(int signal) 
 {
     int paramMem = shmget(204, 3 * sizeof(int), IPC_CREAT | S_IRUSR | S_IRWXU );
@@ -147,13 +149,14 @@ void newProcessHandler(int signal)
     int programNameMem = shmget(203, maxInputSize * sizeof(char), IPC_CREAT | S_IRUSR | S_IRWXU );
     char* programName = (char*) shmat(programNameMem, 0, 0);
     
-    printf("Receive process of type %d\n", params[0]);
+    printf("Receive program %s process of type %d\n", programName, params[0]);
     
-    if(params[0] == -1) return; // condicao de termino
-    
+    if(params[0] == -1) {
+        return; // condicao de termino
+    }
+    totalProcesses++;
+
     Process p;
-    printf("program: %s\n", programName);
-    printf("params[0]: %d\n", params[0]);
 
     strcpy(p.name, programName);
     p.type = params[0];
@@ -167,6 +170,7 @@ void newProcessHandler(int signal)
         execve(programName, NULL, NULL);
     }
     if(pid != 0) { 
+        p.finished = 0;
         if(params[0] == 1) {
             newRoundRobin(p);
         }
@@ -179,9 +183,7 @@ void newProcessHandler(int signal)
             p.duration = params[2];
             newRealTime(p);
         }
-        else return;// invalid value params[0]
-        
-        printf("%s -> program read\n", programName);
+        else return;// invalid value params[0]        
     } 
     shmdt(programName);
     shmdt(params);
@@ -210,7 +212,9 @@ void scheduler() {
     clock_t stTime, curTime;
     stTime = clock();
     int currentSecond = 0;
+    int prevSecond = 0;
     Process* curProcess = NULL;
+    int changedProcess = 0;
     int result, status; // temporary variables to store process meta-data
     
     // 1 if a realTime process is in execution, 0 otherwise
@@ -219,14 +223,16 @@ void scheduler() {
     // 1 if a round robin process is in execution, 0 otherwise
     int executingRoundRobinProcess = 0;
     clock_t rrStartTime;
-    while(1) {
+    while(totalProcesses == 0 || totalProcesses != finishedProcesses) {
         curTime = clock();
         currentSecond = ((curTime - stTime) / CLOCKS_PER_SEC) % 60;
         if (executingRealTimeProcess) {
             result = waitpid(curProcess->procPid, &status, WNOHANG);
+            printf("real time process - result: %d\n\n", result);
             if (result != 0) { // process finished execution
                 printf("Process %s finished\n", curProcess->name);
                 curProcess->finished = 1;
+                // finishedProcesses++;
                 executingRealTimeProcess = 0;
             } else {
                 // if a real time process is executing we must check if its time
@@ -240,11 +246,18 @@ void scheduler() {
         
         // new real time process starting at the current second
         // that has not yet finished
+        if (currentSecond != prevSecond) {
+            if (realTimeProc[currentSecond] != NULL) {
+                printf("start = %d\nfinished = %d\n\n", realTimeProc[currentSecond]->start, realTimeProc[currentSecond]->finished);
+            }
+            prevSecond = currentSecond;
+        }
         if(realTimeProc[currentSecond] != NULL &&
-           realTimeProc[currentSecond]->type != -1 &&
            !realTimeProc[currentSecond]->finished) {
+               printf("stopping process %s\n", curProcess->name);
             kill(curProcess->procPid, SIGSTOP); // stop current process
             curProcess = realTimeProc[currentSecond]; // set current process to be realtime process
+            changedProcess = 1;
             kill(curProcess->procPid, SIGCONT); // resume real time process
             executingRealTimeProcess = 1;
         }
@@ -265,11 +278,13 @@ void scheduler() {
                     if (curProcExecutionTime >= quantum) {
                         kill(curProcess->procPid, SIGSTOP); // stop current process
                         curProcess = nProcess;
+                        changedProcess = 1;
                         kill(curProcess->procPid, SIGCONT); // resume real time process
                     }
                 } else {
                     if(curProcess != NULL) kill(curProcess->procPid, SIGSTOP); // stop current process
                     curProcess = nProcess;
+                    changedProcess = 1;
                     kill(curProcess->procPid, SIGCONT); // resume real time process
                 }
                 
@@ -279,21 +294,23 @@ void scheduler() {
                 }
                 
                 result = waitpid(curProcess->procPid, &status, WNOHANG);
+                printf("pid: %d, result: %d\n", curProcess->procPid, result);
                 if (result != 0) {
                     printf("Process %s finished\n", curProcess->name);
                     curProcess->finished = 1;
+                    // finishedProcesses++;
                 } else {
                     kill(curProcess->procPid, SIGCONT); // resume process
                 }
             }
         }
-        if (curProcess != NULL)
+        if (curProcess != NULL && changedProcess) {
             printf("Executing process %s\n", curProcess->name);
+            changedProcess = 0;
+        }
         
         // falta tambem indicar que os processos acabaram, para que nosso scheduler eventualmente morra e tal...
         // vamos ter que usar algo do tipo wait(pid_processo, &status, ALGUMA FLAG)...
-        //
-        sleep(1);
     }
     
     shmdt(scheduler_pid);

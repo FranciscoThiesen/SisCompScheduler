@@ -50,8 +50,7 @@ int main()
     
     while( (read = getline(&line, &len, pInput) ) != -1)
     {
-        sleep(1);
-        printf("Start reading, interpreter id = %d\n",  *interpret_pid);
+        // printf("Start reading, interpreter id = %d\n",  *interpret_pid);
         
         char* sentence[4];
         int wordIndex = 0;
@@ -61,7 +60,7 @@ int main()
         {
             chomp(word);
             sentence[wordIndex++] = word;
-            printf(" word = %s");
+            // printf(" word = %s", word);
             word = strtok(NULL, " ");
         }
         
@@ -74,7 +73,6 @@ int main()
         
         //programName = sentence[1];
         strcpy( programName, sentence[1] );
-        printf("Vou passar para o scheduler o programa %s\n", programName);
         
         if (wordIndex == 2)
         {
@@ -99,13 +97,15 @@ int main()
             params[2] = length;
             // printf("start: %d, duration: %d\n", params[1], params[2]);
         }
-        printf("Wake up scheduler! : %d\n", *scheduler_pid);
+        // printf("Wake up scheduler! : %d\n", *scheduler_pid);
         // send scheduler a signal indicating a line was read
         if (kill(*scheduler_pid, SIGUSR1) < 0) {
             printf("Error sending signal\n");
             handle_error("signalfd\n");
         }
         printf("\n");
+
+        sleep(1);
     }
     
     params[0] = params[1] = params[2] = -1; // indicando que acabou
