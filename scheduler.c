@@ -103,28 +103,28 @@ void initProcessesQueues() {
 /*
  INSERT NEW PROCESS INTO RESPECTIVE QUEUE
  */
-void newPriority(Process p) {
-    enqueue(priorityProc[p.priority], p);
+void newPriority(Process* p) {
+    enqueue(priorityProc[p->priority], *p);
 }
 
-void newRoundRobin(Process p) {
-    enqueue(roundRobinProc, p);
+void newRoundRobin(Process* p) {
+    enqueue(roundRobinProc, *p);
 }
 
-void newRealTime(Process p) {
-    if(p.start + p.duration > 60) {
-        printf("Erro de overflow na criacao do processo de nome = %s\n", p.name);
+void newRealTime(Process* p) {
+    if(p->start + p->duration > 60) {
+        printf("Erro de overflow na criacao do processo de nome = %s\n", p->name);
         exit(-1);
     }
-    for(int i = p.start; i < p.start + p.duration; ++i) {
+    for(int i = p->start; i < p->start + p->duration; ++i) {
         if(occupiedByRealTime[i]) {
-            printf("Erro, processo de nome %s quer usar segundos ocupados\n", p.name);
+            printf("Erro, processo de nome %s quer usar segundos ocupados\n", p->name);
             exit(-2);
         }
     }
-    realTimeProc[p.start] = &p;
-    printf("--start - %d, duration - %d\n", realTimeProc[p.start]->start, realTimeProc[p.start]->duration);
-    for(int i = p.start; i < p.start + p.duration; ++i) occupiedByRealTime[i] = 1;
+    realTimeProc[p->start] = p;
+    printf("--start - %d, duration - %d\n", realTimeProc[p->start]->start, realTimeProc[p->start]->duration);
+    for(int i = p->start; i < p->start + p->duration; ++i) occupiedByRealTime[i] = 1;
     // inseri um processo realTime
 }
 
@@ -159,32 +159,32 @@ void newProcessHandler(int signal)
     }
     totalProcesses++;
 
-    Process p;
+    Process* p = (Process*) malloc( sizeof ( Process ) );
 
-    strcpy(p.name, programName);
-    p.type = params[0];
+    strcpy(p->name, programName);
+    p->type = params[0];
     
     // Initializes process and stops execution in order to obtain pid
     pid_t pid = fork();
     if(pid != 0) {
-        p.procPid = pid;
+        p->procPid = pid;
         kill(pid, SIGSTOP);
     } else {
         execve(programName, NULL, NULL);
     }
     if(pid != 0) { 
-        p.finished = 0;
+        p->finished = 0;
         if(params[0] == 1) {
-            p.priority = -1;
+            p->priority = -1;
             newRoundRobin(p);
         }
         else if(params[0] == 2) {
-            p.priority = params[1];
+            p->priority = params[1];
             newPriority(p);
         }
         else if(params[0] == 3) {
-            p.start = params[1];
-            p.duration = params[2];
+            p->start = params[1];
+            p->duration = params[2];
             newRealTime(p);
         }
         else return;// invalid value params[0]        
@@ -208,7 +208,7 @@ void enqueueInterruptedProcess(Process* interruptedProcess) {
 Process* switchProcesses(Process* curProcess, Process* nProcess) {
     printf("\nstopping process %s and starting %s\n", curProcess->name, nProcess->name);
     enqueueInterruptedProcess(curProcess);
-    kill(curProcess->procPid, SIGSTOP); // stop current process
+    if(curProcess != NULL) kill(curProcess->procPid, SIGSTOP); // stop current process
     kill(nProcess->procPid, SIGCONT); // start next process
     return nProcess;
 }
