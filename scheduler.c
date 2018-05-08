@@ -77,6 +77,9 @@ int occupiedByRealTime[60];
 // of each realTime process
 Process* realTimeProc[60];
 
+int totalProcesses = 0;
+int finishedProcesses = 0;
+
 void initRealTimeProcesses() {
     // inicializando o vetor de realTime com processos "nulos"
     for(int i = 0; i < 60; ++i) {
@@ -120,6 +123,7 @@ void newRealTime(Process p) {
         }
     }
     realTimeProc[p.start] = &p;
+    printf("--start - %d, duration - %d\n", realTimeProc[p.start]->start, realTimeProc[p.start]->duration);
     for(int i = p.start; i < p.start + p.duration; ++i) occupiedByRealTime[i] = 1;
     // inseri um processo realTime
 }
@@ -139,8 +143,7 @@ Process* nextProcess() {
     
     return NULL;
 }
-int totalProcesses = 0;
-int finishedProcesses = 0;
+
 void newProcessHandler(int signal) 
 {
     int paramMem = shmget(204, 3 * sizeof(int), IPC_CREAT | S_IRUSR | S_IRWXU );
@@ -172,6 +175,7 @@ void newProcessHandler(int signal)
     if(pid != 0) { 
         p.finished = 0;
         if(params[0] == 1) {
+            p.priority = -1;
             newRoundRobin(p);
         }
         else if(params[0] == 2) {
@@ -188,6 +192,25 @@ void newProcessHandler(int signal)
     shmdt(programName);
     shmdt(params);
 
+}
+
+void enqueueInterruptedProcess(Process* interruptedProcess) {
+    int processPriority = interruptedProcess->priority;
+    if (processPriority == -1) {
+        printf("enqueued round robin\n");
+        enqueue(roundRobinProc, *interruptedProcess);
+    } else {
+        printf("enqueued priority\n");
+        enqueue(priorityProc[processPriority], *interruptedProcess);
+    }
+}
+
+Process* switchProcesses(Process* curProcess, Process* nProcess) {
+    printf("\nstopping process %s and starting %s\n", curProcess->name, nProcess->name);
+    enqueueInterruptedProcess(curProcess);
+    kill(curProcess->procPid, SIGSTOP); // stop current process
+    kill(nProcess->procPid, SIGCONT); // start next process
+    return nProcess;
 }
 
 void scheduler() {
@@ -232,7 +255,8 @@ void scheduler() {
             if (result != 0) { // process finished execution
                 printf("Process %s finished\n", curProcess->name);
                 curProcess->finished = 1;
-                // finishedProcesses++;
+                realTimeProc[curProcess->start] = NULL;
+                finishedProcesses++;
                 executingRealTimeProcess = 0;
             } else {
                 // if a real time process is executing we must check if its time
@@ -247,18 +271,15 @@ void scheduler() {
         // new real time process starting at the current second
         // that has not yet finished
         if (currentSecond != prevSecond) {
+            printf("current second %d\n", currentSecond);
             if (realTimeProc[currentSecond] != NULL) {
                 printf("start = %d\nfinished = %d\n\n", realTimeProc[currentSecond]->start, realTimeProc[currentSecond]->finished);
             }
             prevSecond = currentSecond;
         }
-        if(realTimeProc[currentSecond] != NULL &&
-           !realTimeProc[currentSecond]->finished) {
-               printf("stopping process %s\n", curProcess->name);
-            kill(curProcess->procPid, SIGSTOP); // stop current process
-            curProcess = realTimeProc[currentSecond]; // set current process to be realtime process
+        if(realTimeProc[currentSecond] != NULL && !realTimeProc[currentSecond]->finished) {
+            curProcess = switchProcesses(curProcess, realTimeProc[currentSecond]);
             changedProcess = 1;
-            kill(curProcess->procPid, SIGCONT); // resume real time process
             executingRealTimeProcess = 1;
         }
         
@@ -267,38 +288,51 @@ void scheduler() {
         if (!executingRealTimeProcess) {
             Process* nProcess = nextProcess();
             if (nProcess != NULL) { // there is an enqueued process to be executed
-                // if a round robin process is executing we must check if its time
-                // is up before switching processes in case the next process has
-                // equal or less priority (in our case, if it is a round robin process)
-                if (executingRoundRobinProcess && !nProcess->priority) {
-                    // if the current process has surpassed its quantum, then it should
-                    // be switched
-                    int clocks_for_quantum = CLOCKS_PER_SEC * quantum;
-                    int curProcExecutionTime = (curTime - rrStartTime / clocks_for_quantum );
-                    if (curProcExecutionTime >= quantum) {
-                        kill(curProcess->procPid, SIGSTOP); // stop current process
-                        curProcess = nProcess;
-                        changedProcess = 1;
-                        kill(curProcess->procPid, SIGCONT); // resume real time process
+                if(curProcess != NULL) {
+                    // if a round robin process is executing we must check if its time
+                    // is up before switching processes in case the next process has
+                    // equal or less priority (in our case, if it is a round robin process)
+                    if (nProcess->priority == -1) {
+                        if (executingRoundRobinProcess) {
+                            // if the current process has surpassed its quantum, then it should
+                            // be switched
+                            int clocks_for_quantum = CLOCKS_PER_SEC * quantum;
+                            int curProcExecutionTime = (curTime - rrStartTime / clocks_for_quantum );
+                            if (curProcExecutionTime >= quantum) {
+                                curProcess = switchProcesses(curProcess, nProcess);
+                                changedProcess = 1;
+                                rrStartTime = curTime;
+                            }
+                        }
+                    } else { // next process to be executed is priority
+                        // stop current process if priority is greater than current executing process
+                        printf("priority next %d, cur priority: %d\n", nProcess->priority, curProcess->priority);
+                        if (nProcess->priority > curProcess->priority) {
+                            executingRoundRobinProcess = 0;
+                            curProcess = switchProcesses(curProcess, nProcess);
+                            changedProcess = 1;
+                        }
                     }
                 } else {
-                    if(curProcess != NULL) kill(curProcess->procPid, SIGSTOP); // stop current process
                     curProcess = nProcess;
+                    printf("init cur process, %s\n", curProcess->name);
                     changedProcess = 1;
-                    kill(curProcess->procPid, SIGCONT); // resume real time process
+                    if (curProcess->priority == -1) { // save start time for round robin processes
+                        executingRoundRobinProcess = 1;
+                        rrStartTime = curTime;
+                    }
                 }
-                
-                if (!curProcess->priority) { // save start time for round robin processes
-                    executingRoundRobinProcess = 1;
-                    rrStartTime = curTime;
-                }
+
                 
                 result = waitpid(curProcess->procPid, &status, WNOHANG);
-                printf("pid: %d, result: %d\n", curProcess->procPid, result);
+                printf("name: %s, result: %d\n", curProcess->name, result);
                 if (result != 0) {
+                    if (executingRoundRobinProcess) {
+                        executingRoundRobinProcess = 0;
+                    }
                     printf("Process %s finished\n", curProcess->name);
                     curProcess->finished = 1;
-                    // finishedProcesses++;
+                    finishedProcesses++;
                 } else {
                     kill(curProcess->procPid, SIGCONT); // resume process
                 }
