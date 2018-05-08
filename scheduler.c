@@ -63,6 +63,14 @@ Process* deque(Queue* pQueue) {
     return ret;
 }
 
+Process* getQueueHead(Queue* pQueue) {
+    if(isEmpty(pQueue)) {
+        return NULL;
+    }
+    Process* ret = &((pQueue->info)[pQueue->head]);
+    return ret;
+}
+
 // Queue for the round-robin processes
 Queue* roundRobinProc;
 
@@ -122,23 +130,36 @@ void newRealTime(Process* p) {
             exit(-2);
         }
     }
+
     realTimeProc[p->start] = p;
-    printf("--start - %d, duration - %d\n", realTimeProc[p->start]->start, realTimeProc[p->start]->duration);
+    printf("realTimeProc[start - %d]: duration - %d an finished\n", realTimeProc[p->start]->start, realTimeProc[p->start]->duration);
     for(int i = p->start; i < p->start + p->duration; ++i) occupiedByRealTime[i] = 1;
     // inseri um processo realTime
 }
 
 // Get next process to execute
-Process* nextProcess() {
+void dequeueNextProcess() {
     for(int i = 0; i < numPriorities; ++i) {
         if( !isEmpty(priorityProc[i]) ) {
             printf("dequed priority\n");
-            return deque(priorityProc[i]);
+            deque(priorityProc[i]);
         }
     }
     if( !isEmpty(roundRobinProc) )  {
         printf("dequed round robin\n");
-        return deque(roundRobinProc);
+        deque(roundRobinProc);
+    }
+}
+
+// Get next process to execute
+Process* getNextProcess() {
+    for(int i = 0; i < numPriorities; ++i) {
+        if( !isEmpty(priorityProc[i]) ) {
+            return getQueueHead(priorityProc[i]);
+        }
+    }
+    if( !isEmpty(roundRobinProc) )  {
+        return getQueueHead(roundRobinProc);
     }
     
     return NULL;
@@ -252,7 +273,7 @@ void scheduler() {
         if (executingRealTimeProcess) {
             result = waitpid(curProcess->procPid, &status, WNOHANG);
             // printf("real time process - result: %d\n\n", result);
-            if (result == 0) { // process finished execution
+            if (result != 0) { // process finished execution
                 printf("Process %s finished\n", curProcess->name);
                 curProcess->finished = 1;
                 realTimeProc[curProcess->start] = NULL;
@@ -273,20 +294,23 @@ void scheduler() {
         if (currentSecond != prevSecond) {
             printf("current second %d\n", currentSecond);
             if (realTimeProc[currentSecond] != NULL) {
-                printf("start = %d\nfinished = %d\n\n", realTimeProc[currentSecond]->start, realTimeProc[currentSecond]->finished);
+                printf("start = %d\nduration=%d\nfinished = %d\n\n", realTimeProc[currentSecond]->start, realTimeProc[currentSecond]->duration, realTimeProc[currentSecond]->finished);
             }
             prevSecond = currentSecond;
         }
-        if(realTimeProc[currentSecond] != NULL && !realTimeProc[currentSecond]->finished) {
+        if(!executingRealTimeProcess &&
+            realTimeProc[currentSecond] != NULL &&
+            !realTimeProc[currentSecond]->finished) {
             curProcess = switchProcesses(curProcess, realTimeProc[currentSecond]);
             changedProcess = 1;
             executingRealTimeProcess = 1;
+            printf("executing real time process\n\n");
         }
         
         // If no real time process is currently in execution
         // check which process to execute next. Next process will
         if (!executingRealTimeProcess) {
-            Process* nProcess = nextProcess();
+            Process* nProcess = getNextProcess();
             if (nProcess != NULL) { // there is an enqueued process to be executed
                 if(curProcess != NULL) {
                     // if a round robin process is executing we must check if its time
@@ -299,6 +323,7 @@ void scheduler() {
                             int clocks_for_quantum = CLOCKS_PER_SEC * quantum;
                             int curProcExecutionTime = (curTime - rrStartTime / clocks_for_quantum );
                             if (curProcExecutionTime >= quantum) {
+                                dequeueNextProcess();
                                 curProcess = switchProcesses(curProcess, nProcess);
                                 changedProcess = 1;
                                 rrStartTime = curTime;
@@ -306,14 +331,16 @@ void scheduler() {
                         }
                     } else { // next process to be executed is priority
                         // stop current process if priority is greater than current executing process
-                        printf("priority next %d, cur priority: %d\n", nProcess->priority, curProcess->priority);
+                        // printf("priority next %d, cur priority: %d\n", nProcess->priority, curProcess->priority);
                         if (nProcess->priority > curProcess->priority) {
-                            executingRoundRobinProcess = 0;
+                            dequeueNextProcess();
                             curProcess = switchProcesses(curProcess, nProcess);
+                            executingRoundRobinProcess = 0;
                             changedProcess = 1;
                         }
                     }
                 } else {
+                    dequeueNextProcess();
                     curProcess = nProcess;
                     printf("init cur process, %s\n", curProcess->name);
                     changedProcess = 1;
@@ -339,14 +366,10 @@ void scheduler() {
                 }
             }
         }
-        
         if (curProcess != NULL && changedProcess) {
             printf("Executing process %s\n", curProcess->name);
             changedProcess = 0;
         }
-        
-        // falta tambem indicar que os processos acabaram, para que nosso scheduler eventualmente morra e tal...
-        // vamos ter que usar algo do tipo wait(pid_processo, &status, ALGUMA FLAG)...
     }
     
     shmdt(scheduler_pid);
