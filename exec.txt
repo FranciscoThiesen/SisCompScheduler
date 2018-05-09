@@ -1,4 +1,2 @@
-Exec p1
-Exec p3 PR=2
 Exec p2 I=04 D=06
-Exec p4 PR=4
+Exec p3 PR=2
