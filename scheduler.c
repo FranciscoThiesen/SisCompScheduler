@@ -205,15 +205,17 @@ void newProcessHandler(int signal)
     
     p->type = params[0];
     
-    // Initializes process and stops execution in order to obtain pid
     pid_t pid = fork();
     if(pid != 0) 
     {
         p->procPid = pid;
         kill(pid, SIGSTOP);
     } 
-    else execve(programName, NULL, NULL);
-    
+    else
+    {
+        // mudanca crucial para o funcionamento do código
+        execve(p->name, NULL, NULL);
+    }
 
     if(pid != 0) 
     { 
@@ -265,13 +267,13 @@ Process* switchProcesses(Process* curProcess, Process* nProcess)
     
     if(curProcess != NULL)
     {
-    	printf("Vou matar %s\n", curProcess->name);
+    	//printf("Vou matar %s\n", curProcess->name);
 
     	kill(curProcess->procPid, SIGSTOP); // stop current process
     	
-    	printf("BIZUU %d %d\n", curProcess->procPid, nProcess->procPid);
+    	//printf("BIZUU %d %d\n", curProcess->procPid, nProcess->procPid);
     }
-    printf("BIZUU %d %d\n", curProcess->procPid, nProcess->procPid);
+    //printf("BIZUU %d %d\n", curProcess->procPid, nProcess->procPid);
 
     printf("Vou continuar %s\n", nProcess->name);
 
@@ -352,7 +354,7 @@ void scheduler()
         // that has not yet finished
         if (currentSecond != prevSecond) 
         {
-            printf("current second %d\n", currentSecond);
+            //printf("current second %d\n", currentSecond);
             if (realTimeProc[currentSecond] != NULL) 
             {
                 printf("start = %d\nduration=%d\nfinished = %d\n\n", realTimeProc[currentSecond]->start, realTimeProc[currentSecond]->duration, realTimeProc[currentSecond]->finished);
@@ -363,8 +365,8 @@ void scheduler()
             realTimeProc[currentSecond] != NULL &&
             ! (realTimeProc[currentSecond]->finished) ) 
         {
-        	printf("Vamos botar %s pra rodar nessa porra", realTimeProc[currentSecond]->name);
-            printf("processoAtual = %s, next = %s\n", curProcess->name, realTimeProc[currentSecond]->name);
+        	//printf("Vamos botar %s pra rodar nessa porra", realTimeProc[currentSecond]->name);
+            //printf("processoAtual = %s, next = %s\n", curProcess->name, realTimeProc[currentSecond]->name);
             printf("Valor de curProcess antes = %s\n", curProcess->name);
             curProcess = switchProcesses(curProcess, realTimeProc[currentSecond]);
             printf("Valor de curProcess depois = %s\n", curProcess->name);

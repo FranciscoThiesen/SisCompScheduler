@@ -5,7 +5,7 @@ int main()
 {
     for(int i = 0; i < 10; ++i)
     {
-        printf("PX rodando %d\n", i);
+        printf("P2 rodando %d\n", i);
         fflush(stdout);
         sleep(1);
     }
