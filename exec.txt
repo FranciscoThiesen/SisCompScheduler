@@ -1,5 +1,5 @@
 Exec p1
-Exec p2 PR=2
-Exec p3 PR=4
+Exec p2 PR=4
+Exec p3 PR=2
 Exec p4 I=06 D=05
 Exec p5

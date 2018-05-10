@@ -399,7 +399,7 @@ void scheduler()
                     { // next process to be executed is priority
                         // stop current process if priority is greater than current executing process
                         // printf("priority next %d, cur priority: %d\n", nProcess->priority, curProcess->priority);
-                        if (nProcess->priority > curProcess->priority) 
+                        if (nProcess->priority < curProcess->priority || curProcess->priority == -1) 
                         {
                             dequeueNextProcess();
                             curProcess = switchProcesses(curProcess, nProcess);

@@ -1,3 +1,8 @@
+Trabalho 1 de Sistemas da Computação
+Autores: Bruna Aleixo      - 1510503
+         Francisco Thiesen - 1611854
+
+
 Exec.txt
 
 Exec p1
