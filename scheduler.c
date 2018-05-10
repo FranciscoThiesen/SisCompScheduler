@@ -159,14 +159,15 @@ void dequeueNextProcess()
     {
         if( !isEmpty(priorityProc[i]) ) 
         {
-            printf("dequed priority\n");
-            deque(priorityProc[i]);
+            Process* p = deque(priorityProc[i]);
+            printf("dequed priority %s\n", p->name);
+            break;
         }
     }
     if( !isEmpty(roundRobinProc) )  
     {
-        printf("dequed round robin\n");
-        deque(roundRobinProc);
+        Process* p = deque(roundRobinProc);
+        printf("dequed round robin %s\n", p->name);
     }
 }
 
@@ -248,12 +249,12 @@ void enqueueInterruptedProcess(Process* interruptedProcess)
     int processPriority = interruptedProcess->priority;
     if (processPriority == -1) 
     {
-        printf("enqueued round robin\n");
+        printf("enqueued round robin %s\n", interruptedProcess->name);
         enqueue(roundRobinProc, *interruptedProcess);
     } 
     else 
     {
-        printf("enqueued priority\n");
+        printf("enqueued priority %s\n", interruptedProcess->name);
         enqueue(priorityProc[processPriority], *interruptedProcess);
     }
 }
@@ -267,15 +268,8 @@ Process* switchProcesses(Process* curProcess, Process* nProcess)
     
     if(curProcess != NULL)
     {
-    	//printf("Vou matar %s\n", curProcess->name);
-
     	kill(curProcess->procPid, SIGSTOP); // stop current process
-    	
-    	//printf("BIZUU %d %d\n", curProcess->procPid, nProcess->procPid);
     }
-    //printf("BIZUU %d %d\n", curProcess->procPid, nProcess->procPid);
-
-    printf("Vou continuar %s\n", nProcess->name);
 
     kill(nProcess->procPid, SIGCONT); // start next process
     
@@ -292,9 +286,6 @@ void scheduler()
     printf("scheduler pid = %d\n", *scheduler_pid);
     
     // register new process handler as callback function
-    //
-    //sig_t t = signal(SIGUSR1, newProcessHandler);
-    //printf("num te falei %d\n", signal(SIGUSR1, newProcessHandler) );
     if (signal(SIGUSR1, newProcessHandler) < 0) 
     {
         printf("error registering signal\n");
@@ -442,6 +433,7 @@ void scheduler()
                     }
                     printf("Process %s finished\n", curProcess->name);
                     curProcess->finished = 1;
+                    curProcess = NULL;
                     finishedProcesses++;
                 } 
                 else 
