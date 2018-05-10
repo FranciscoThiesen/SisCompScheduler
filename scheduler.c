@@ -353,14 +353,11 @@ void scheduler()
         }
         if( !executingRealTimeProcess &&
             realTimeProc[currentSecond] != NULL &&
-            ! (realTimeProc[currentSecond]->finished) ) 
+            !(realTimeProc[currentSecond]->finished) ) 
         {
-        	//printf("Vamos botar %s pra rodar nessa porra", realTimeProc[currentSecond]->name);
-            //printf("processoAtual = %s, next = %s\n", curProcess->name, realTimeProc[currentSecond]->name);
             curProcess = switchProcesses(curProcess, realTimeProc[currentSecond]);
             changedProcess = 1;
             executingRealTimeProcess = 1;
-            //printf("executing real time process\n\n");
         }
         
         // If no real time process is currently in execution
@@ -421,7 +418,6 @@ void scheduler()
             if (curProcess != NULL) 
             {
                 result = waitpid(curProcess->procPid, &status, WNOHANG);
-                // printf("name: %s, result: %d\n", curProcess->name, result);
                 if (result != 0 && !curProcess->finished) 
                 {
                     if (executingRoundRobinProcess) 

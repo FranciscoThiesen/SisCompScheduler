@@ -76,7 +76,6 @@ int main()
         
         if (wordIndex == 2)
         {
-            printf("quero agendar um round-robin = %s\n", programName);
             params[0] = 1;
             // printf("round robin\n");
         }
