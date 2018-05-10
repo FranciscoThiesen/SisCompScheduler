@@ -262,13 +262,23 @@ void enqueueInterruptedProcess(Process* interruptedProcess)
 Process* switchProcesses(Process* curProcess, Process* nProcess) 
 {    
     // so colocar de volta na fila, se nao for realTime obviamente
-    if(curProcess->type != 3) enqueueInterruptedProcess(curProcess);
+    printf("Vou tentar colocar %s p rodar\n", nProcess->name);
     
+    if( curProcess != NULL && curProcess->type != 3)
+    {
+        printf("Entrei no if\n");
+        enqueueInterruptedProcess(curProcess);
+        printf("vou colocar curProc de volta na fila\n");
+    }
     if(curProcess != NULL)
     {
+        printf("Vou tentar matar alguem\n");
         printf("\nstopping process %s", curProcess->name);
     	kill(curProcess->procPid, SIGSTOP); // stop current process
     }
+    if(nProcess == NULL) printf("ele esta NULL\n");
+    
+    printf("Deveria ter chegado aqui\n"); fflush(stdout);
     printf(" and starting %s\n", nProcess->name);
     kill(nProcess->procPid, SIGCONT); // start next process
     
@@ -348,14 +358,19 @@ void scheduler()
             if (realTimeProc[currentSecond] != NULL) 
             {
                 printf("start = %d\nduration=%d\nfinished = %d\n\n", realTimeProc[currentSecond]->start, realTimeProc[currentSecond]->duration, realTimeProc[currentSecond]->finished);
+                printf("%d %d %d\n\n", executingRealTimeProcess,realTimeProc[currentSecond] != NULL, realTimeProc[currentSecond]->finished);
             }
+
+
             prevSecond = currentSecond;
         }
         if( !executingRealTimeProcess &&
             realTimeProc[currentSecond] != NULL &&
-            !(realTimeProc[currentSecond]->finished) ) 
+            realTimeProc[currentSecond]->finished == 0) 
         {
+            printf("Vou botar p rodar %s\n", realTimeProc[currentSecond]->name);
             curProcess = switchProcesses(curProcess, realTimeProc[currentSecond]);
+            printf("Botei p rodar %s\n", realTimeProc[currentSecond]->name);
             changedProcess = 1;
             executingRealTimeProcess = 1;
         }
