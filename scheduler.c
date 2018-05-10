@@ -385,8 +385,8 @@ void scheduler()
                             // if the current process has surpassed its quantum, then it should
                             // be switched
                             int clocks_for_quantum = CLOCKS_PER_SEC * quantum;
-                            int curProcExecutionTime = (curTime - rrStartTime / clocks_for_quantum );
-                            if (curProcExecutionTime >= quantum) {
+                            int curProcExecutionTime = curTime - rrStartTime;
+                            if (curProcExecutionTime >= clocks_for_quantum) {
                                 dequeueNextProcess();
                                 curProcess = switchProcesses(curProcess, nProcess);
                                 changedProcess = 1;
