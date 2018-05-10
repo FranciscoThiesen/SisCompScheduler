@@ -161,7 +161,7 @@ void dequeueNextProcess()
         {
             Process* p = deque(priorityProc[i]);
             printf("dequed priority %s\n", p->name);
-            break;
+            return;
         }
     }
     if( !isEmpty(roundRobinProc) )  
@@ -260,17 +260,16 @@ void enqueueInterruptedProcess(Process* interruptedProcess)
 }
 
 Process* switchProcesses(Process* curProcess, Process* nProcess) 
-{
-    printf("\nstopping process %s and starting %s\n", curProcess->name, nProcess->name);
-    
+{    
     // so colocar de volta na fila, se nao for realTime obviamente
     if(curProcess->type != 3) enqueueInterruptedProcess(curProcess);
     
     if(curProcess != NULL)
     {
+        printf("\nstopping process %s", curProcess->name);
     	kill(curProcess->procPid, SIGSTOP); // stop current process
     }
-
+    printf(" and starting %s\n", nProcess->name);
     kill(nProcess->procPid, SIGCONT); // start next process
     
     return nProcess;
@@ -358,9 +357,7 @@ void scheduler()
         {
         	//printf("Vamos botar %s pra rodar nessa porra", realTimeProc[currentSecond]->name);
             //printf("processoAtual = %s, next = %s\n", curProcess->name, realTimeProc[currentSecond]->name);
-            printf("Valor de curProcess antes = %s\n", curProcess->name);
             curProcess = switchProcesses(curProcess, realTimeProc[currentSecond]);
-            printf("Valor de curProcess depois = %s\n", curProcess->name);
             changedProcess = 1;
             executingRealTimeProcess = 1;
             //printf("executing real time process\n\n");
