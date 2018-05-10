@@ -181,3 +181,4 @@ P4 rodando 7
 P4 rodando 8
 P4 rodando 9
 Process p4 finished
+'./scheduler &' has ended
