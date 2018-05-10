@@ -1,0 +1,183 @@
+Exec.txt
+
+Exec p1
+Exec p2 PR=2
+Exec p3 PR=4
+Exec p4 I=06 D=05
+Exec p5
+
+—————————————————————————————————————————————————————————————————————————————————
+
+O interpretador lê do arquivo exec.txt, na ordem, os programas a serem executados assim como seus parâmetros, espaçados por 1 segundo cada. Ele salva os parâmetros na memória compartilhada e emite um sinal para o scheduler indicando a leitura de um novo processo. 
+O scheduler, por sua vez, trata os sinais recebidos na função newProcessHandler, onde ele lê da memória compartilhada os dados referentes ao novo processo e adiciona o processo para ser escalonado. 
+Caso o processo seja real time, ele salva em um vetor de tamanho 60 (1 para cada segundo) no índice correspondente ao segundo no qual sua execução deve se iniciar. Além disso, ele preenche o vetor de ocupados com 1s nos segundos no qual esse processo executa. Toda vez que um novo processo é inserido, é verificado se existe algum conflito, isto é, um overlap nos tempos de execução de quaisquer processos real time. Caso o processo seja do tipo prioridade, ele armazena o processo em um vetor de filas (7 filas no total - 1 para cada prioridade), no índice correspondente à sua prioridade. Caso o processo seja round robin, ele armazena em uma fila de processos do tipo round robin. 
+O programa está constantemente rodando para verificar qual o próximo processo a ser executado, priorizando sempre a execução de um processo real time, seguido por processo de prioridade (roda o de mais alta prioridade antes) e, por fim, o processo round robin (alterna com outros processos round robin de acordo com o quantum de tempo especificado). 
+
+1. O programa recebe um processo p1 do tipo round robin, iniciando sua execução. 
+2. Após 1 segundo, ele recebe p2 com prioridade 2, interrompendo p1 (round robin) para rodar p2. 
+3. No segundo seguinte, ele recebe p3, que tem prioridade 4, ou seja, maior do que o do p2. Então ele para de executar p2 e passa a executar p3. 
+4. Em seguida, ele recebe p4 do tipo real time que começa no segundo 6 e dura 5 segundos. Ele continua executando p3.
+5. No 5o segundo, ele recebe um processo do tipo round robin, que ele adiciona a fila de processos a serem executados.
+6. No segundo 6, ele interrompe a execução de p3 e passa a executar o processo real time por 5 segundos. 
+7. Após executar o processo real time pela duração especificada, ele retoma o p3 até acabar a sua execução. Uma vez p3 terminado, ele roda p2 até seu término.
+8. Sobrando apenas 2 processos round robin e um real time a ser executado no segundo seguinte, ele alterna entre os dois processos round robin, executando cada um por 2 segundos (quantum de tempo definido no programa).
+9. Por fim, ele espera o 6o segundo do segundo minuto para acabar de executar o processo real time.
+
+—————————————————————————————————————————————————————————————————————————————————
+
+Os programas devem ser compilados e executados com o comando:
+./scheduler & ./interpreter
+
+
+Impressão:
+
+scheduler pid = 5593
+registered signal handler
+
+
+// PASSO 1
+Receive program p1 process of type 1
+dequed round robin p1
+init cur process, p1
+Executing process p1
+P1 rodando 0
+
+// PASSO 2
+Receive program p2 process of type 2
+dequed priority p2
+enqueued round robin p1
+
+stopping process p1 and starting p2
+Executing process p2
+P2 rodando 0
+
+// PASSO 3
+Receive program p3 process of type 2
+dequed priority p3
+enqueued priority p2
+
+stopping process p2 and starting p3
+Executing process p3
+P3 rodando 0
+
+// PASSO 4
+Receive program p4 process of type 3
+realTimeProc[start - 6]: duration - 5 an finished
+P3 rodando 1
+
+// PASSO 5
+Receive program p5 process of type 1
+P3 rodando 2
+P3 rodando 3
+P3 rodando 4
+
+// PASSO 6
+start = 6
+duration=5
+finished = 0
+
+enqueued priority p3
+
+stopping process p3 and starting p4
+Executing process p4
+P4 rodando 0
+P4 rodando 1
+P4 rodando 2
+P4 rodando 3
+P4 rodando 4
+P4 rodando 5
+dequed priority p2
+
+// PASSO 7
+stopping process p4 and starting p2
+Executing process p2
+dequed priority p3
+enqueued priority p2
+
+stopping process p2 and starting p3
+Executing process p3
+P3 rodando 5
+P3 rodando 6
+P3 rodando 7
+P3 rodando 8
+P3 rodando 9
+Process p3 finished
+
+dequed priority p2
+Executing process p2
+P2 rodando 1
+P2 rodando 2
+P2 rodando 3
+P2 rodando 4
+P2 rodando 5
+P2 rodando 6
+P2 rodando 7
+P2 rodando 8
+P2 rodando 9
+Process p2 finished
+
+// PASSO 8
+dequed round robin p1
+Executing process p1
+P1 rodando 1
+P1 rodando 2
+P1 rodando 3
+dequed round robin p5
+enqueued round robin p1
+
+stopping process p1 and starting p5
+Executing process p5
+P5 rodando 0
+P5 rodando 1
+P5 rodando 2
+dequed round robin p1
+enqueued round robin p5
+
+stopping process p5 and starting p1
+Executing process p1
+P1 rodando 4
+P1 rodando 5
+P1 rodando 6
+dequed round robin p5
+enqueued round robin p1
+
+stopping process p1 and starting p5
+Executing process p5
+P5 rodando 3
+P5 rodando 4
+P5 rodando 5
+dequed round robin p1
+enqueued round robin p5
+
+stopping process p5 and starting p1
+Executing process p1
+P1 rodando 7
+P1 rodando 8
+P1 rodando 9
+dequed round robin p5
+enqueued round robin p1
+
+stopping process p1 and starting p5
+Executing process p5
+P5 rodando 6
+P5 rodando 7
+P5 rodando 8
+dequed round robin p1
+enqueued round robin p5
+
+stopping process p5 and starting p1
+Executing process p1
+Process p1 finished
+dequed round robin p5
+Executing process p5
+P5 rodando 9
+Process p5 finished
+
+start = 6
+duration=5
+finished = 0
+P4 rodando 6
+P4 rodando 7
+P4 rodando 8
+P4 rodando 9
+Process p4 finished
